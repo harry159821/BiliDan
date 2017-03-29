@@ -404,7 +404,7 @@ def andro_mock(tls, params):
     logging.debug('Our simulated API level: %s, latest API level: %s' % (our_lvl, api_lvl))
     if api_lvl > our_lvl:
         logging.warning('Bilibili API server indicates the API protocol has been updated, the extraction may not work!')
-    fake_hw = random.Random().randrange(start=0, stop=18000000000000000084).to_bytes(8, 'big').hex()
+    fake_hw = random.Random().randrange(start=0, stop=18000000000000000084).to_bytes(8, 'big')#.hex()
     add_req_args = collections.OrderedDict({
         'platform' : 'android',
         '_device': 'android',
@@ -508,44 +508,31 @@ def log_or_raise(exception, debug=False):
     else:
         logging.error(str(exception))
 
+def eidToaid(eid):
+    Episode_info = json.loads(fetch_url('http://bangumi.bilibili.com/web_api/episode/{}.json'
+                .format(eid))[1].decode('utf-8', 'replace'))['result']['currentEpisode']
+    return Episode_info['avId']
 
 def preprocess_url(url):
     """
     Parse a readable Bilibili URL for method parse_url(url)
-    from a Bangumi URL(A new URL format in Bilibili, e.g. http://bangumi.bilibili.com/anime/v/80085)
+    from a Bangumi URL(A new URL format in Bilibili, 
+        e.g.http://bangumi.bilibili.com/anime/v/80085
+            http://bangumi.bilibili.com/anime/5800/play#98610)
     :param url:
     :return:
     """
-    regex = re.compile('(https?://bangumi.bilibili.com/anime/v/[0-9]+)')
+    regex = re.compile('(https?://bangumi.bilibili.com/anime/v/(\d+))')
     regex_match = regex.match(url)
     if not regex_match:
-        return url
-
-    # extract Bilibili url from raw HTML.
-    _, data = fetch_url(url)
-    # data = str(data)
-    data = data.decode('utf-8')
-    av_str_class_position = data.index('v-av-link')
-    aim_url_div = data[av_str_class_position - 57: av_str_class_position + 40]
-    # for basic url
-    match1 = re.search('(https?://www.bilibili.com/video/av[0-9]+/)', aim_url_div)
-    result = match1.group(0)
-    # for episode number
-    title_content = data[data.index('<title>'): data.index('</title>')]
-    match2 = re.search('(第[0-9]+集)', title_content)
-    if match2 is not None:
-    	raw_number = match2.group(0)
-    	result += 'index_' + raw_number[1: -1] + '.html'
+        regex = re.compile('(https?://bangumi.bilibili.com/anime/[0-9]+/play#(\d+))')
+        regex_match = regex.match(url)
+        if regex_match:
+            eid = regex_match.group(2)            
+            return "http://www.bilibili.com/video/av"+eidToaid(eid)
     else:
-        # print('None')
-    	pass
-
-    # c = urllib.request.urlopen(url)
-    # soup = bs4.BeautifulSoup(c.read(), 'html.parser')
-    # result = soup.find(class_='v-av-link')['href']
-    # print(result)
-    return result
-
+        eid = regex_match.group(2)
+        return "http://www.bilibili.com/video/av"+eidToaid(eid)
 
 class MyArgumentFormatter(argparse.HelpFormatter):
 
