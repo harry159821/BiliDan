@@ -530,6 +530,8 @@ def preprocess_url(url):
         if regex_match:
             eid = regex_match.group(2)            
             return "http://www.bilibili.com/video/av"+eidToaid(eid)
+        else:
+            return url
     else:
         eid = regex_match.group(2)
         return "http://www.bilibili.com/video/av"+eidToaid(eid)
@@ -584,7 +586,7 @@ def main():
         url = preprocess_url(url)
         try:
             retval = retval or biligrab(url, debug=args.debug, verbose=args.verbose, tls=args.tls, media=args.media, comment=args.comment, cookie=args.cookie, quality=quality, source=source, keep_fps=args.keep_fps, mpvflags=mpvflags, d2aflags=d2aflags, fakeip=args.fakeip)
-        except OSError as e:
+        except OSError as e:            
             logging.error(e)
             retval = retval or e.errno
             if args.debug:
