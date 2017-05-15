@@ -357,6 +357,42 @@ def biligrab(url, *, debug=False, verbose=False, tls=False, media=None, comment=
 
     return player_exit_code
 
+def biliLive(url):
+    _, response = fetch_url(url, user_agent=USER_AGENT_API)
+    resp_match = re.search('var ROOMID = (.*?);', response.decode('gbk', 'replace'))
+    if not resp_match:
+        return
+    # http://live.bilibili.com/api/playurl?player=1&quality=0&cid=1029
+    roomId = resp_match.group(1)
+    infoUrl = "http://live.bilibili.com/api/playurl?player=1&quality=0&cid="+roomId
+
+    _, response = fetch_url(infoUrl, user_agent=USER_AGENT_API)
+    resp_match = re.search("CDATA(.*?)live-play.acgvideo.com(.*?)><", response.decode('gbk', 'replace'))
+    if not resp_match:
+        return
+    resp_match = re.search("CDATA\[(.*?)]]><", resp_match.group(0))
+    if not resp_match:
+        return
+    liveUrl = resp_match.group(1)
+
+    command_line = ['mpv', liveUrl]
+    log_command(command_line)
+    player_process = subprocess.Popen(command_line)
+    try:
+        player_process.wait()
+    except KeyboardInterrupt:
+        logging.info('Terminating media player...')
+        try:
+            player_process.terminate()
+            try:
+                player_process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                logging.info('Killing media player by force...')
+                player_process.kill()
+        except Exception:
+            pass
+        raise
+    return player_process.returncode
 
 def fetch_url(url, *, user_agent=USER_AGENT_PLAYER, cookie=None, fakeip=None):
     '''Fetch HTTP URL
@@ -584,6 +620,11 @@ def main():
     for url in args.url:
         # if url is a Bangumi format URL (e.g. http://bangumi.bilibili.com/anime/v/80085)
         url = preprocess_url(url)
+        # Check Live
+        if "live.bilibili.com" in url:
+            logging.getLogger().setLevel(logging.DEBUG)
+            biliLive(url)
+            return
         try:
             retval = retval or biligrab(url, debug=args.debug, verbose=args.verbose, tls=args.tls, media=args.media, comment=args.comment, cookie=args.cookie, quality=quality, source=source, keep_fps=args.keep_fps, mpvflags=mpvflags, d2aflags=d2aflags, fakeip=args.fakeip)
         except OSError as e:            
