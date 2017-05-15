@@ -358,6 +358,8 @@ def biligrab(url, *, debug=False, verbose=False, tls=False, media=None, comment=
     return player_exit_code
 
 def biliLive(url):
+    # http://live.bilibili.com/bili/isliving/139?callback=isliving
+    # http://live.bilibili.com/139
     _, response = fetch_url(url, user_agent=USER_AGENT_API)
     resp_match = re.search('var ROOMID = (.*?);', response.decode('gbk', 'replace'))
     if not resp_match:
